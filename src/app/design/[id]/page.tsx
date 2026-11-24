@@ -23,7 +23,10 @@ export default async function EditDesignPage({ params }: { params: Promise<{ id:
   const { data: row } = await supabase.from("designs").select("id, name, config").eq("id", id).maybeSingle();
   if (!row) notFound();
 
-  const catalog = await loadCatalog();
+  const [catalog, { data: profile }] = await Promise.all([
+    loadCatalog(),
+    supabase.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+  ]);
   const config = normalizeConfig(row.config, catalog);
 
   return (
@@ -32,6 +35,7 @@ export default async function EditDesignPage({ params }: { params: Promise<{ id:
       initialConfig={config}
       design={{ id: String(row.id), name: String(row.name), config }}
       userId={user.id}
+      isAdmin={profile?.role === "admin"}
     />
   );
 }
