@@ -6,6 +6,9 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { createClient } from "@/lib/supabase/client";
 import { findOption, LIMITS, normalizeConfig } from "@/lib/ring/catalog";
 import { estimatePrice, formatUsd } from "@/lib/ring/price";
+import { buildSpec, specAsText } from "@/lib/ring/spec";
+import type * as THREE from "three";
+import { downloadFile, slugify } from "./download";
 import { euSize, formatUsSize, innerDiameterMm, US_SIZES } from "@/lib/ring/sizing";
 import type { BasicOption, Catalog, RingConfig } from "@/lib/ring/types";
 
@@ -30,6 +33,8 @@ interface Props {
   initialConfig: RingConfig;
   design: SavedDesign | null;
   userId: string | null;
+  /** Admins can download the STL and spec to test with the wax lab. */
+  isAdmin?: boolean;
 }
 
 // ---------- undo and redo ----------
@@ -90,7 +95,7 @@ type SaveStatus = "idle" | "unsaved" | "saving" | "saved" | "error";
 
 // ---------- the designer ----------
 
-export function Designer({ catalog, initialConfig, design, userId }: Props) {
+export function Designer({ catalog, initialConfig, design, userId, isAdmin = false }: Props) {
   const [history, dispatch] = useReducer(historyReducer, {
     past: [],
     present: initialConfig,
@@ -106,6 +111,7 @@ export function Designer({ catalog, initialConfig, design, userId }: Props) {
   const [draftLoaded, setDraftLoaded] = useState(Boolean(design));
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const ringRef = useRef<THREE.Group>(null);
   const lastSaved = useRef(design ? JSON.stringify({ name: design.name, config: design.config }) : "");
 
   const set = useCallback(
@@ -238,6 +244,17 @@ export function Designer({ catalog, initialConfig, design, userId }: Props) {
 
   const setting = findOption(catalog.settings, config.setting);
   const estimate = useMemo(() => estimatePrice(config, catalog), [config, catalog]);
+  const spec = useMemo(() => buildSpec(config, catalog), [config, catalog]);
+
+  async function downloadStl() {
+    if (!ringRef.current) return;
+    const { exportMetalStl } = await import("./export-stl");
+    downloadFile(exportMetalStl(ringRef.current), `${slugify(name)}.stl`, "model/stl");
+  }
+
+  function downloadSpec() {
+    downloadFile(specAsText(name, spec), `${slugify(name)}-spec.txt`, "text/plain");
+  }
 
   const statusText: Record<SaveStatus, string> = {
     idle: "",
@@ -253,7 +270,12 @@ export function Designer({ catalog, initialConfig, design, userId }: Props) {
         aria-label="3D preview"
         className="relative h-[55vh] min-h-[320px] border-b border-line lg:h-auto lg:min-h-0 lg:flex-1 lg:border-b-0 lg:border-r"
       >
-        <RingCanvas config={config} catalog={catalog} onCanvas={(el) => (canvasRef.current = el)} />
+        <RingCanvas
+          config={config}
+          catalog={catalog}
+          groupRef={ringRef}
+          onCanvas={(el) => (canvasRef.current = el)}
+        />
         <div className="pointer-events-none absolute bottom-3 left-4 text-xs text-muted">
           Drag to turn · scroll or pinch to zoom
         </div>
@@ -401,6 +423,39 @@ export function Designer({ catalog, initialConfig, design, userId }: Props) {
             </label>
             <p className="text-xs text-muted">The engraving goes on the spec sheet; it isn&apos;t drawn in the preview.</p>
           </Group>
+
+          <details className="group rounded-xl border border-line px-4 py-3">
+            <summary className="cursor-pointer list-none text-xs uppercase tracking-widest text-muted">
+              Specifications
+            </summary>
+            <dl className="mt-3 grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
+              {spec.map((line) => (
+                <div key={line.label} className="contents">
+                  <dt className="text-muted">{line.label}</dt>
+                  <dd className="min-w-0 break-words tabular-nums">{line.value}</dd>
+                </div>
+              ))}
+            </dl>
+            {isAdmin && (
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-3">
+                <span className="w-full text-xs text-muted">Admin only: files for testing with the wax lab</span>
+                <button
+                  type="button"
+                  onClick={downloadStl}
+                  className="rounded-full border border-ink px-3 py-1.5 text-sm hover:bg-ink hover:text-paper"
+                >
+                  Download STL
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadSpec}
+                  className="rounded-full border border-line px-3 py-1.5 text-sm hover:border-ink"
+                >
+                  Download spec
+                </button>
+              </div>
+            )}
+          </details>
         </div>
 
         <div className="sticky bottom-0 mt-auto border-t border-line bg-paper px-4 py-4 sm:px-6">

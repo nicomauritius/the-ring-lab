@@ -21,7 +21,23 @@ function useDisposable<T extends { dispose: () => void }>(value: T): T {
  * The ring in millimetres. The band is revolved around Y, then turned so the finger hole
  * faces the camera (along Z) and the top of the ring points up (+Y).
  */
-export function RingModel({ config, catalog }: { config: RingConfig; catalog: Catalog }) {
+const METAL = { part: "metal" } as const;
+const STONE = { part: "stone" } as const;
+
+/** Thinnest prong wire a wax printer and casting can hold reliably, as a radius in mm (0.9 mm wire). */
+const MIN_PRONG_RADIUS = 0.45;
+/** Bezel wall thickness in mm. */
+const BEZEL_WALL = 0.6;
+
+export function RingModel({
+  config,
+  catalog,
+  groupRef,
+}: {
+  config: RingConfig;
+  catalog: Catalog;
+  groupRef?: React.Ref<THREE.Group>;
+}) {
   const metal = findOption(catalog.metals, config.metal);
   const finish = findOption(catalog.finishes, config.finish);
   const stoneType = findOption(catalog.stoneTypes, config.stoneType);
@@ -110,8 +126,8 @@ export function RingModel({ config, catalog }: { config: RingConfig; catalog: Ca
   }
 
   return (
-    <group>
-      <mesh geometry={bandGeometry} material={metalMaterial} rotation={[-Math.PI / 2, 0, 0]} />
+    <group ref={groupRef}>
+      <mesh geometry={bandGeometry} material={metalMaterial} rotation={[-Math.PI / 2, 0, 0]} userData={METAL} />
       {settingNode}
     </group>
   );
@@ -138,20 +154,36 @@ function Head({ diameter: d, shape, kind, baseY, metal, stone, halo }: HeadProps
 
   const seatY = kind === "bezel" ? baseY + pavilion * 0.75 : baseY + pavilion + 0.4;
   const base = baseY - seatY - 0.3; // band surface, in the head's local space
-  const prongRadius = Math.max(0.3, d * 0.06);
+  const prongRadius = Math.max(MIN_PRONG_RADIUS, d * 0.06);
 
   const stoneGeometry = useDisposable(
     useMemo(() => new THREE.LatheGeometry(toVectors(stoneProfile(d)), spec.segments), [d, spec.segments]),
   );
 
+  const bezelTop = girdle + crown * 0.3;
+  const bezelSegments = spec.segments <= 8 ? spec.segments : 48;
+  const bezelGeometry = useDisposable(
+    useMemo(() => {
+      // A solid cup wall: outer face up, inner face down, so the wall has real thickness for casting.
+      const top = d / 2 + 0.4;
+      const bottom = d * 0.32;
+      return new THREE.LatheGeometry(
+        [
+          new THREE.Vector2(bottom, base),
+          new THREE.Vector2(top, bezelTop),
+          new THREE.Vector2(top - BEZEL_WALL, bezelTop),
+          new THREE.Vector2(bottom - BEZEL_WALL, base),
+          new THREE.Vector2(bottom, base),
+        ],
+        bezelSegments,
+      );
+    }, [d, base, bezelTop, bezelSegments]),
+  );
+
   let mount: React.ReactNode;
   if (kind === "bezel") {
-    const top = girdle + crown * 0.3;
-    const segments = spec.segments <= 8 ? spec.segments : 48;
     mount = (
-      <mesh material={metal} position={[0, (top + base) / 2, 0]} rotation={[0, spec.rotation, 0]}>
-        <cylinderGeometry args={[d / 2 + 0.4, d * 0.32, top - base, segments, 1, true]} />
-      </mesh>
+      <mesh geometry={bezelGeometry} material={metal} rotation={[0, spec.rotation, 0]} userData={METAL} />
     );
   } else {
     const count = kind === "prong6" ? 6 : 4;
@@ -169,17 +201,17 @@ function Head({ diameter: d, shape, kind, baseY, metal, stone, halo }: HeadProps
             <group key={i}>
               <Strut from={from} to={mid} radius={prongRadius} material={metal} />
               <Strut from={mid} to={tip} radius={prongRadius} material={metal} />
-              <mesh material={metal} position={mid}>
+              <mesh material={metal} position={mid} userData={METAL}>
                 <sphereGeometry args={[prongRadius, 12, 8]} />
               </mesh>
-              <mesh material={metal} position={tip}>
+              <mesh material={metal} position={tip} userData={METAL}>
                 <sphereGeometry args={[prongRadius * 1.15, 12, 8]} />
               </mesh>
             </group>
           );
         })}
-        <mesh material={metal} position={[0, -pavilion * 0.55, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[d * 0.3, Math.max(0.25, d * 0.04), 10, 48]} />
+        <mesh material={metal} position={[0, -pavilion * 0.55, 0]} rotation={[Math.PI / 2, 0, 0]} userData={METAL}>
+          <torusGeometry args={[d * 0.3, Math.max(MIN_PRONG_RADIUS, d * 0.04), 10, 48]} />
         </mesh>
       </>
     );
@@ -188,7 +220,7 @@ function Head({ diameter: d, shape, kind, baseY, metal, stone, halo }: HeadProps
   return (
     <>
       <group position={[0, seatY, 0]} scale={[spec.scaleX, 1, spec.scaleZ]}>
-        <mesh geometry={stoneGeometry} material={stone} rotation={[0, spec.rotation, 0]} />
+        <mesh geometry={stoneGeometry} material={stone} rotation={[0, spec.rotation, 0]} userData={STONE} />
         {mount}
       </group>
       {halo && (
@@ -217,7 +249,7 @@ function Strut({ from, to, radius, material }: { from: Vec3; to: Vec3; radius: n
   }, [from, to]);
 
   return (
-    <mesh material={material} position={position} quaternion={quaternion}>
+    <mesh material={material} position={position} quaternion={quaternion} userData={METAL}>
       <cylinderGeometry args={[radius, radius, length, 12]} />
     </mesh>
   );
@@ -264,9 +296,9 @@ function Halo({
 
   return (
     <group>
-      <mesh geometry={frame} material={metal} />
+      <mesh geometry={frame} material={metal} userData={METAL} />
       {positions.map((pos, i) => (
-        <mesh key={i} geometry={meleeGeometry} material={stone} position={pos} />
+        <mesh key={i} geometry={meleeGeometry} material={stone} position={pos} userData={STONE} />
       ))}
     </group>
   );

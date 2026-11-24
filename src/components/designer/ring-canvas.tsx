@@ -2,6 +2,7 @@
 
 import { ContactShadows, Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
+import type * as THREE from "three";
 import { innerDiameterMm } from "@/lib/ring/sizing";
 import type { Catalog, RingConfig } from "@/lib/ring/types";
 import { RingModel } from "./ring-model";
@@ -11,9 +12,11 @@ interface Props {
   catalog: Catalog;
   /** Receives the canvas element, used to take a thumbnail when saving. */
   onCanvas?: (canvas: HTMLCanvasElement) => void;
+  /** Receives the ring's root object, used to export the STL. */
+  groupRef?: React.Ref<THREE.Group>;
 }
 
-export function RingCanvas({ config, catalog, onCanvas }: Props) {
+export function RingCanvas({ config, catalog, onCanvas, groupRef }: Props) {
   const outerRadius = innerDiameterMm(config.sizeUs) / 2 + config.bandThicknessMm * 1.3;
 
   return (
@@ -25,7 +28,7 @@ export function RingCanvas({ config, catalog, onCanvas }: Props) {
     >
       <ambientLight intensity={0.25} />
       <directionalLight position={[10, 20, 15]} intensity={1.2} />
-      <RingModel config={config} catalog={catalog} />
+      <RingModel config={config} catalog={catalog} groupRef={groupRef} />
       <ContactShadows position={[0, -outerRadius - 0.5, 0]} opacity={0.35} scale={60} blur={2.5} far={20} />
       <OrbitControls enablePan={false} minDistance={35} maxDistance={140} target={[0, 4, 0]} />
       {/* A studio light box built in code, so nothing is fetched from another site.
