@@ -6,7 +6,7 @@ Built with Next.js (App Router, TypeScript, Tailwind CSS) and Supabase (Postgres
 
 ## Status
 
-**Phase 0: Foundation.** Landing page, sign-in (email/password, Google, Microsoft), user profiles with roles, and role-protected routes. See the coding plan for later phases.
+**Phase 1: 3D designer.** Landing page, sign-in (email/password, Google, Microsoft), roles, and a 3D ring designer at `/design` with saved designs, thumbnails, undo/redo and a rough price estimate.
 
 ## Run it locally
 
