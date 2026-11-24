@@ -18,7 +18,7 @@ export function RingCanvas({ config, catalog, onCanvas }: Props) {
 
   return (
     <Canvas
-      camera={{ position: [0, 9, 50], fov: 32 }}
+      camera={{ position: [0, 12, 78], fov: 30 }}
       dpr={[1, 2]}
       gl={{ preserveDrawingBuffer: true, antialias: true, alpha: true }}
       onCreated={({ gl }) => onCanvas?.(gl.domElement)}
@@ -27,9 +27,11 @@ export function RingCanvas({ config, catalog, onCanvas }: Props) {
       <directionalLight position={[10, 20, 15]} intensity={1.2} />
       <RingModel config={config} catalog={catalog} />
       <ContactShadows position={[0, -outerRadius - 0.5, 0]} opacity={0.35} scale={60} blur={2.5} far={20} />
-      <OrbitControls enablePan={false} minDistance={25} maxDistance={90} target={[0, 3, 0]} />
-      {/* A studio light box built in code, so nothing is fetched from another site. */}
+      <OrbitControls enablePan={false} minDistance={35} maxDistance={140} target={[0, 4, 0]} />
+      {/* A studio light box built in code, so nothing is fetched from another site.
+          The warm grey base keeps polished metal from reflecting a black void. */}
       <Environment resolution={256}>
+        <color attach="background" args={["#cfc8b8"]} />
         <Lightformer form="rect" intensity={3} position={[0, 12, 10]} scale={[24, 6, 1]} />
         <Lightformer form="rect" intensity={2} position={[-16, 4, -4]} rotation={[0, Math.PI / 2, 0]} scale={[20, 4, 1]} />
         <Lightformer form="rect" intensity={2} position={[16, 4, -4]} rotation={[0, -Math.PI / 2, 0]} scale={[20, 4, 1]} />
