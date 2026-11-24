@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
-import { Inter, Newsreader } from "next/font/google";
+import { Cormorant_Garamond, Inter } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const newsreader = Newsreader({ subsets: ["latin"], variable: "--font-newsreader", display: "swap" });
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "The Ring Lab",
@@ -13,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${newsreader.variable}`}>
+    <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
       <body className="flex min-h-full flex-col antialiased">
         <SiteHeader />
         <div className="flex flex-1 flex-col">{children}</div>

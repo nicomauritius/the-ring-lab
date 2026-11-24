@@ -1,23 +1,27 @@
 @import "tailwindcss";
 
-/* Warm paper ground, ink text, clay accent. Light by default, dark follows the OS. */
+/* Warm cream ground, soft ink, bronze accent, navy brand mark. Dark mode follows the OS. */
 :root {
-  --paper: #faf9f5;
-  --ink: #141413;
-  --muted: #6b6a63;
-  --clay: #d97757;
-  --line: #e4e2d9;
-  --field: #ffffff;
+  --paper: #f4f1e8;
+  --ink: #2f2d26;
+  --muted: #6b675c;
+  --clay: #8f7444;
+  --clay-ink: #ffffff;
+  --navy: #26307a;
+  --line: #e2ddcf;
+  --field: #fbfaf5;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #141413;
-    --ink: #faf9f5;
-    --muted: #a3a29a;
-    --clay: #e08a6c;
-    --line: #2f2e2a;
-    --field: #1d1d1b;
+    --paper: #17160f;
+    --ink: #f1ede2;
+    --muted: #a9a394;
+    --clay: #c6a56a;
+    --clay-ink: #17160f;
+    --navy: #9aa6f0;
+    --line: #333126;
+    --field: #201f17;
     color-scheme: dark;
   }
 }
@@ -27,9 +31,11 @@
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-clay: var(--clay);
+  --color-clay-ink: var(--clay-ink);
+  --color-navy: var(--navy);
   --color-line: var(--line);
   --color-field: var(--field);
-  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-serif: var(--font-cormorant), Georgia, "Times New Roman", serif;
   --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
