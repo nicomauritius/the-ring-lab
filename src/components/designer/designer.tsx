@@ -9,6 +9,7 @@ import { estimatePrice, formatUsd } from "@/lib/ring/price";
 import { buildSpec, specAsText } from "@/lib/ring/spec";
 import type * as THREE from "three";
 import { downloadFile, slugify } from "./download";
+import { ExportPanel } from "./export-panel";
 import { euSize, formatUsSize, innerDiameterMm, US_SIZES } from "@/lib/ring/sizing";
 import type { BasicOption, Catalog, RingConfig } from "@/lib/ring/types";
 
@@ -456,6 +457,16 @@ export function Designer({ catalog, initialConfig, design, userId, isAdmin = fal
               </div>
             )}
           </details>
+
+          {userId && designId && (
+            <ExportPanel
+              designId={designId}
+              config={config}
+              catalog={catalog}
+              saved={status === "saved"}
+              ringRef={ringRef}
+            />
+          )}
         </div>
 
         <div className="sticky bottom-0 mt-auto border-t border-line bg-paper px-4 py-4 sm:px-6">

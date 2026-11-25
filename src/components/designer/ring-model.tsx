@@ -3,7 +3,16 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { findOption } from "@/lib/ring/catalog";
-import { bandProfile, STONE_PROPORTIONS, stoneProfile, stoneShapeSpec, type Point } from "@/lib/ring/geometry";
+import {
+  bandProfile,
+  HALO_FRAME_RADIUS_MM,
+  HALO_MELEE_MM,
+  headDimensions,
+  STONE_PROPORTIONS,
+  stoneProfile,
+  stoneShapeSpec,
+  type Point,
+} from "@/lib/ring/geometry";
 import { innerDiameterMm, stoneDiameterMm } from "@/lib/ring/sizing";
 import type { Catalog, RingConfig } from "@/lib/ring/types";
 
@@ -23,11 +32,6 @@ function useDisposable<T extends { dispose: () => void }>(value: T): T {
  */
 const METAL = { part: "metal" } as const;
 const STONE = { part: "stone" } as const;
-
-/** Thinnest prong wire a wax printer and casting can hold reliably, as a radius in mm (0.9 mm wire). */
-const MIN_PRONG_RADIUS = 0.45;
-/** Bezel wall thickness in mm. */
-const BEZEL_WALL = 0.6;
 
 export function RingModel({
   config,
@@ -154,7 +158,7 @@ function Head({ diameter: d, shape, kind, baseY, metal, stone, halo }: HeadProps
 
   const seatY = kind === "bezel" ? baseY + pavilion * 0.75 : baseY + pavilion + 0.4;
   const base = baseY - seatY - 0.3; // band surface, in the head's local space
-  const prongRadius = Math.max(MIN_PRONG_RADIUS, d * 0.06);
+  const { prongRadius, galleryRadius, bezelWall } = headDimensions(d, shape);
 
   const stoneGeometry = useDisposable(
     useMemo(() => new THREE.LatheGeometry(toVectors(stoneProfile(d)), spec.segments), [d, spec.segments]),
@@ -171,13 +175,13 @@ function Head({ diameter: d, shape, kind, baseY, metal, stone, halo }: HeadProps
         [
           new THREE.Vector2(bottom, base),
           new THREE.Vector2(top, bezelTop),
-          new THREE.Vector2(top - BEZEL_WALL, bezelTop),
-          new THREE.Vector2(bottom - BEZEL_WALL, base),
+          new THREE.Vector2(top - bezelWall, bezelTop),
+          new THREE.Vector2(bottom - bezelWall, base),
           new THREE.Vector2(bottom, base),
         ],
         bezelSegments,
       );
-    }, [d, base, bezelTop, bezelSegments]),
+    }, [d, base, bezelTop, bezelSegments, bezelWall]),
   );
 
   let mount: React.ReactNode;
@@ -211,7 +215,7 @@ function Head({ diameter: d, shape, kind, baseY, metal, stone, halo }: HeadProps
           );
         })}
         <mesh material={metal} position={[0, -pavilion * 0.55, 0]} rotation={[Math.PI / 2, 0, 0]} userData={METAL}>
-          <torusGeometry args={[d * 0.3, Math.max(MIN_PRONG_RADIUS, d * 0.04), 10, 48]} />
+          <torusGeometry args={[d * 0.3, galleryRadius, 10, 48]} />
         </mesh>
       </>
     );
@@ -269,10 +273,9 @@ function Halo({
   metal: THREE.Material;
   stone: THREE.Material;
 }) {
-  const melee = 1.3;
   const { positions, frame, meleeGeometry } = useMemo(() => {
     const perimeter = Math.PI * (3 * (radiusX + radiusZ) - Math.sqrt((3 * radiusX + radiusZ) * (radiusX + 3 * radiusZ)));
-    const count = Math.max(10, Math.round(perimeter / (melee * 1.1)));
+    const count = Math.max(10, Math.round(perimeter / (HALO_MELEE_MM * 1.1)));
     const pts: Vec3[] = Array.from({ length: count }, (_, i) => {
       const a = (i * 2 * Math.PI) / count;
       return [Math.cos(a) * radiusX, y, Math.sin(a) * radiusZ];
@@ -280,14 +283,14 @@ function Halo({
     const path = new THREE.CatmullRomCurve3(
       Array.from({ length: 64 }, (_, i) => {
         const a = (i * 2 * Math.PI) / 64;
-        return new THREE.Vector3(Math.cos(a) * radiusX, y - melee * 0.45, Math.sin(a) * radiusZ);
+        return new THREE.Vector3(Math.cos(a) * radiusX, y - HALO_MELEE_MM * 0.45, Math.sin(a) * radiusZ);
       }),
       true,
     );
     return {
       positions: pts,
-      frame: new THREE.TubeGeometry(path, 128, melee * 0.42, 10, true),
-      meleeGeometry: new THREE.LatheGeometry(toVectors(stoneProfile(melee)), 8),
+      frame: new THREE.TubeGeometry(path, 128, HALO_FRAME_RADIUS_MM, 10, true),
+      meleeGeometry: new THREE.LatheGeometry(toVectors(stoneProfile(HALO_MELEE_MM)), 8),
     };
   }, [y, radiusX, radiusZ]);
 

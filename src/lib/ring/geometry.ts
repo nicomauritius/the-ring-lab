@@ -16,6 +16,8 @@ export interface BandShape {
   topRadius: number;
   /** Largest outer radius anywhere on the band. */
   outerRadius: number;
+  /** Thinnest radial wall across the middle half of the band's width, in mm. */
+  minWallMm: number;
 }
 
 type ProfileFn = { inner: (u: number) => number; outer: (u: number) => number };
@@ -34,11 +36,14 @@ export function bandProfile(profileId: string, innerRadius: number, thickness: n
   const steps = 40;
   const points: Point[] = [];
   let outerRadius = 0;
+  let minWallMm = Infinity;
 
   for (let i = 0; i <= steps; i++) {
     const u = -1 + (2 * i) / steps;
     const x = innerRadius + thickness * fn.outer(u);
     outerRadius = Math.max(outerRadius, x);
+    // The edges of rounded and knife-edge profiles taper by design, so only the middle half counts.
+    if (Math.abs(u) <= 0.5) minWallMm = Math.min(minWallMm, thickness * (fn.outer(u) - fn.inner(u)));
     points.push({ x, y: (u * width) / 2 });
   }
   for (let i = steps; i >= 0; i--) {
@@ -47,7 +52,7 @@ export function bandProfile(profileId: string, innerRadius: number, thickness: n
   }
   points.push({ ...points[0] });
 
-  return { points, topRadius: innerRadius + thickness * fn.outer(0), outerRadius };
+  return { points, topRadius: innerRadius + thickness * fn.outer(0), outerRadius, minWallMm };
 }
 
 /** Volume of a closed profile revolved around the y axis (Pappus's theorem), in mm³. */
@@ -100,4 +105,43 @@ export const STONE_SHAPES: Record<string, StoneShapeSpec> = {
 
 export function stoneShapeSpec(shapeId: string): StoneShapeSpec {
   return STONE_SHAPES[shapeId] ?? STONE_SHAPES.round;
+}
+
+// ---------- metal around the stone ----------
+
+/** Thinnest prong or gallery wire a wax print and casting hold reliably, in mm. */
+export const MIN_WIRE_DIAMETER_MM = 0.9;
+/** Thinnest bezel wall that casts cleanly, in mm. */
+export const MIN_BEZEL_WALL_MM = 0.8;
+/** Size of the small halo stones, in mm. */
+export const HALO_MELEE_MM = 1.3;
+/** Radius of the tube that carries the halo stones, in mm. */
+export const HALO_FRAME_RADIUS_MM = HALO_MELEE_MM * 0.42;
+
+export interface HeadDimensions {
+  /** Prong wire radius before the head is stretched to the stone's shape. */
+  prongRadius: number;
+  /** Radius of the gallery ring under the stone, before stretching. */
+  galleryRadius: number;
+  /** Bezel wall thickness before stretching. */
+  bezelWall: number;
+  /** The smallest stretch applied to the head (below 1 for long shapes such as marquise). */
+  squeeze: number;
+}
+
+/**
+ * Metal sizes for a head holding a stone of this girdle diameter and shape. The head is
+ * stretched to the stone's outline, which thins the metal across the narrow side, so the
+ * sizes are made larger up front to stay castable after stretching.
+ */
+export function headDimensions(diameter: number, shapeId: string): HeadDimensions {
+  const spec = stoneShapeSpec(shapeId);
+  const squeeze = Math.min(1, spec.scaleX, spec.scaleZ);
+  const minRadius = MIN_WIRE_DIAMETER_MM / 2 / squeeze;
+  return {
+    prongRadius: Math.max(minRadius, diameter * 0.06),
+    galleryRadius: Math.max(minRadius, diameter * 0.04),
+    bezelWall: MIN_BEZEL_WALL_MM / squeeze,
+    squeeze,
+  };
 }

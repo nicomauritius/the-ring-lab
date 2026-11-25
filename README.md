@@ -6,14 +6,17 @@ Built with Next.js (App Router, TypeScript, Tailwind CSS) and Supabase (Postgres
 
 ## Status
 
-**Phase 1: 3D designer.** Landing page, sign-in (email/password, Google, Microsoft), roles, and a 3D ring designer at `/design` with saved designs, thumbnails, undo/redo and a rough price estimate.
+**Phase 2: export and wax orders (in progress).** Landing page, sign-in (email/password, Google, Microsoft), roles, and a 3D ring designer at `/design` with saved designs, thumbnails, undo/redo and a rough price estimate.
+
+Saved designs can be exported: the designer checks the ring can be cast (band wall at least 1.2 mm, prong and bezel metal at least 0.9 / 0.8 mm, closed surfaces), then stores a binary STL of the metal and a one-page spec PDF for that design version in the private `stl` and `specs` buckets (`design_files` table). Files are never overwritten, so a later wax order can point at exactly what was sent. Next: wax orders with Stripe Checkout.
 
 ## Run it locally
 
 1. Install Node.js 20 or newer.
-2. `npm install`, then commit the generated `package-lock.json`.
+2. `npm install`.
 3. Copy `.env.example` to `.env.local` and fill in your Supabase URL and anon key.
 4. `npm run dev` and open http://localhost:3000.
+5. `npm test` runs the unit tests (Vitest).
 
 ## Set up Supabase
 
